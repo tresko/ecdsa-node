@@ -1,26 +1,39 @@
-import { useState } from "react";
-import server from "./server";
+import {useState, useContext} from 'react'
+import {WalletContext} from './context'
+import server from './server'
 
-function Transfer({ address, setBalance }) {
-  const [sendAmount, setSendAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
+function Transfer({balance, setBalance}) {
+  const {signer} = useContext(WalletContext)
+  const [sendAmount, setSendAmount] = useState('')
+  const [recipient, setRecipient] = useState('')
 
-  const setValue = (setter) => (evt) => setter(evt.target.value);
+  const setValue = setter => evt => setter(evt.target.value)
 
   async function transfer(evt) {
-    evt.preventDefault();
+    if (balance < parseInt(sendAmount)) {
+      alert("'Not enough funds!")
+      return
+    }
 
+    evt.preventDefault()
     try {
       const {
-        data: { balance },
+        data: {nonce},
+      } = await server.get('/nonce')
+      const message = `Transfer ${sendAmount} to ${recipient} with nonce ${nonce}`
+      const signature = await signer.signMessage(message)
+      const {
+        data: {balance},
       } = await server.post(`send`, {
-        sender: address,
+        signature,
+        message,
         amount: parseInt(sendAmount),
         recipient,
-      });
-      setBalance(balance);
+        nonce,
+      })
+      setBalance(balance)
     } catch (ex) {
-      alert(ex.response.data.message);
+      alert(ex.response.data.message)
     }
   }
 
@@ -46,9 +59,14 @@ function Transfer({ address, setBalance }) {
         ></input>
       </label>
 
-      <input type="submit" className="button" value="Transfer" />
+      <input
+        disabled={!recipient || !sendAmount}
+        type="submit"
+        className="button"
+        value="Transfer"
+      />
     </form>
-  );
+  )
 }
 
-export default Transfer;
+export default Transfer
