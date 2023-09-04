@@ -41,6 +41,8 @@ app.post('/send', (req, res) => {
     return
   }
 
+  delete nonces[nonce]
+
   recipient = recipient.toLowerCase()
 
   const sender = decodeSignature(message, signature)
